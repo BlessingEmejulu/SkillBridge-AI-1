@@ -16,7 +16,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from './lib/utils';
-import { useOnlineStatus, toggleManualOffline } from './lib/useOnlineStatus';
+import { useOnlineStatus, cycleConnectionState } from './lib/useOnlineStatus';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const AICoach = lazy(() => import('./components/AICoach'));
@@ -31,7 +31,7 @@ export type TabType = 'dashboard' | 'coach' | 'resume' | 'interview' | 'roadmap'
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isOnline = useOnlineStatus();
+  const { isOnline, speed, isSlow } = useOnlineStatus();
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -125,14 +125,26 @@ export default function App() {
           </div>
           <div className="flex items-center gap-6">
             <button 
-              onClick={toggleManualOffline}
+              onClick={cycleConnectionState}
               className={cn(
-                "flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors cursor-pointer",
-                isOnline ? "text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-emerald-100" : "text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100"
+                "flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all cursor-pointer shadow-2xs hover:shadow-xs",
+                speed === 'fast' && "text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
+                speed === 'slow' && "text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100 animate-pulse",
+                speed === 'offline' && "text-rose-600 bg-rose-50 border-rose-200 hover:bg-rose-100"
               )}
+              title="Click to cycle simulated network speeds (Online Fast -> Low Bandwidth Slow -> Offline)"
             >
-              <span className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-500" : "bg-amber-500")}></span>
-              {isOnline ? 'Online (Click to mock)' : 'Offline (Click to mock)'}
+              <span className={cn(
+                "w-2 h-2 rounded-full",
+                speed === 'fast' && "bg-emerald-500 animate-pulse",
+                speed === 'slow' && "bg-amber-500",
+                speed === 'offline' && "bg-rose-500"
+              )}></span>
+              <span>
+                {speed === 'fast' && 'Online (Fast Connection)'}
+                {speed === 'slow' && 'Low Connection (Slow 3G)'}
+                {speed === 'offline' && 'Offline Mode (No Connection)'}
+              </span>
             </button>
             <div className="flex items-center gap-3">
               <div className="text-right">
@@ -155,14 +167,25 @@ export default function App() {
             <span className="ml-3 font-bold text-slate-900">SkillBridge AI</span>
           </div>
           <button 
-            onClick={toggleManualOffline}
+            onClick={cycleConnectionState}
             className={cn(
-              "flex items-center gap-2 text-[10px] font-semibold px-2 py-1 rounded-full border",
-              isOnline ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-amber-600 bg-amber-50 border-amber-200"
+              "flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border",
+              speed === 'fast' && "text-emerald-600 bg-emerald-50 border-emerald-200",
+              speed === 'slow' && "text-amber-600 bg-amber-50 border-amber-200",
+              speed === 'offline' && "text-rose-600 bg-rose-50 border-rose-200"
             )}
           >
-            <span className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500" : "bg-amber-500")}></span>
-            {isOnline ? 'Synced' : 'Offline'}
+            <span className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              speed === 'fast' && "bg-emerald-500",
+              speed === 'slow' && "bg-amber-500",
+              speed === 'offline' && "bg-rose-500"
+            )}></span>
+            <span>
+              {speed === 'fast' && 'Online'}
+              {speed === 'slow' && 'Slow Connection'}
+              {speed === 'offline' && 'Offline'}
+            </span>
           </button>
         </header>
 

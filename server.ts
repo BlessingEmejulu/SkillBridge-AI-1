@@ -24,10 +24,10 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { prompt, systemInstruction } = req.body;
     const response = await ai.models.generateContent({
-      model: "gemma-4-31b-it",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        systemInstruction: systemInstruction || "You are a helpful AI Career Coach powered by Gemma. Use Google Search to find current career trends, job postings, industry updates, and relevant interview guidance.",
+        systemInstruction: systemInstruction || "You are a helpful AI Career Coach powered by Gemma 4. Use Google Search to find current career trends, job postings, industry updates, and relevant interview guidance.",
         tools: [{ googleSearch: {} }],
       },
     });
@@ -54,10 +54,10 @@ app.post("/api/review-resume", async (req, res) => {
     const { resumeText, targetRole } = req.body;
     const prompt = `Please review this resume for the role of ${targetRole}. Provide an ATS score out of 100, identify skill gaps, and give actionable suggestions for optimization.\n\nResume:\n${resumeText}`;
     const response = await ai.models.generateContent({
-      model: "gemma-4-e4b-it",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        systemInstruction: "You are an expert ATS and Resume Reviewer AI.",
+        systemInstruction: "You are an expert ATS and Resume Reviewer AI powered by Gemma 4.",
         responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
@@ -84,10 +84,10 @@ app.post("/api/interview", async (req, res) => {
     const { role, type } = req.body;
     const prompt = `Generate 3 realistic ${type} interview questions for a ${role} position.`;
     const response = await ai.models.generateContent({
-      model: "gemma-4-26b-a4b-it",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        systemInstruction: "You are an expert technical and HR interviewer.",
+        systemInstruction: "You are an expert technical and HR interviewer powered by Gemma 4.",
         responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
@@ -111,6 +111,159 @@ app.post("/api/interview", async (req, res) => {
     res.json(JSON.parse(response.text || "{}"));
   } catch (error: any) {
     console.error("AI Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API route for GitHub Repository analysis
+app.post("/api/analyze-repo", async (req, res) => {
+  try {
+    const { repoName, username, description, languages, readmeContent } = req.body;
+    const prompt = `Analyze this GitHub repository to give a detailed recruiter-readiness review:
+Repository Name: ${repoName}
+Owner/User: ${username}
+Description: ${description || "No description provided"}
+Primary Languages: ${languages ? languages.join(", ") : "Not specified"}
+README Content:
+${readmeContent || "No README.md content found or file is empty"}
+
+Please return:
+1. A recruiter appeal score (0 to 100)
+2. A general assessment of the repository's presentation
+3. Actionable README improvement suggestions
+4. Architectural/code organization suggestions based on the technology profile
+5. Crucial missing files (e.g. .env.example, tests, CI/CD configs) that would elevate this project.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "You are an expert tech recruiter and principal software engineer reviewing portfolio code to evaluate candidate quality, powered by Gemma 4.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            score: { type: "INTEGER", description: "Recruiter appeal score out of 100" },
+            generalAssessment: { type: "STRING", description: "Summary of presentation, structure, and value" },
+            readmeSuggestions: { type: "ARRAY", items: { type: "STRING" }, description: "Specific improvements to make the README stellar for recruiters" },
+            codeSuggestions: { type: "ARRAY", items: { type: "STRING" }, description: "Code quality, structure, and architecture tips based on the language/stack" },
+            missingFiles: { type: "ARRAY", items: { type: "STRING" }, description: "Standard files that are missing but highly recommended (e.g., tests, linter, LICENSE)" }
+          },
+          required: ["score", "generalAssessment", "readmeSuggestions", "codeSuggestions", "missingFiles"]
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text || "{}"));
+  } catch (error: any) {
+    console.error("AI Repo Analysis Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API route for AI Job Matcher (uses Google Search Tool)
+app.post("/api/match-jobs", async (req, res) => {
+  try {
+    const { targetRole, skills } = req.body;
+    const prompt = `Find open real-world job postings, active hiring updates, or actual current job listings and market insights for the role of "${targetRole}" requiring skills: "${skills}". Use Google Search to find real, actual open positions or very realistic current listings with details (title, company, location, salary, link/source).
+
+Determine:
+1. Active real job matches with a match score (0-100) based on how well they align with the skills: "${skills}".
+2. The current percentage increase or decrease in hiring demand for this specific role in the tech industry.
+3. The average salary for this role based on active listings or industry data.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "You are an expert recruitment and job market intelligence agent powered by Gemma 4. Always use Google Search to ground listings in real industry data.",
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            jobs: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING", description: "Job title" },
+                  company: { type: "STRING", description: "Company name" },
+                  location: { type: "STRING", description: "Job location (e.g. Remote, City, State)" },
+                  salary: { type: "STRING", description: "Salary range or estimation (e.g. $110k - $145k)" },
+                  match: { type: "INTEGER", description: "Match percentage out of 100 based on provided skills" },
+                  link: { type: "STRING", description: "Source link or URI where this job or similar jobs can be found" },
+                  description: { type: "STRING", description: "One sentence summarizing key requirements or responsibilities" }
+                },
+                required: ["title", "company", "location", "salary", "match", "link"]
+              }
+            },
+            marketTrend: { type: "STRING", description: "Hiring trend, e.g. '+14%' or '-2%'" },
+            marketTrendDesc: { type: "STRING", description: "Short context about demand trends for this role" },
+            avgSalary: { type: "STRING", description: "Average salary, e.g. '$135,000'" },
+            avgSalaryDesc: { type: "STRING", description: "Short context explaining salary distribution or range" }
+          },
+          required: ["jobs", "marketTrend", "marketTrendDesc", "avgSalary", "avgSalaryDesc"]
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text || "{}"));
+  } catch (error: any) {
+    console.error("AI Match Jobs Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API route for AI Scaffold Generator
+app.post("/api/generate-scaffold", async (req, res) => {
+  try {
+    const { title, desc, tech } = req.body;
+    const prompt = `Generate a comprehensive step-by-step development roadmap, directory structure, and boilerplate starting code for the project: "${title}".
+Description: "${desc}"
+Tech stack to use: ${tech.join(", ")}
+
+Your goal is to help a candidate build a stellar version of this project for their resume/portfolio. Provide a clean directory layout, 3 development steps with clear instructions and specific, fully written boilerplate starter files (no truncated codes), and recruiter-readiness advice.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "You are an expert principal software architect. You provide highly educational and complete codebase scaffolding structures in JSON.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            title: { type: "STRING" },
+            directoryTree: { type: "STRING", description: "Visual text-based directory tree of the project" },
+            steps: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  phase: { type: "STRING", description: "e.g. 'Phase 1: Setup & State' or 'Step 1'" },
+                  title: { type: "STRING" },
+                  guide: { type: "STRING", description: "Detailed guide or architectural description of what to do" },
+                  filename: { type: "STRING", description: "The filename for the starting boilerplate code" },
+                  code: { type: "STRING", description: "Full starting code block for this file" }
+                },
+                required: ["phase", "title", "guide", "filename", "code"]
+              }
+            },
+            recruiterTips: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "Key recruiter appeal highlights"
+            }
+          },
+          required: ["title", "directoryTree", "steps", "recruiterTips"]
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text || "{}"));
+  } catch (error: any) {
+    console.error("AI Generate Scaffold Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
