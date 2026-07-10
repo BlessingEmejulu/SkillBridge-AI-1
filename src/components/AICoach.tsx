@@ -4,9 +4,15 @@ import { saveToDB, loadFromDB } from '../lib/store';
 import { cn } from '../lib/utils';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
 
+interface Source {
+  title: string;
+  uri: string;
+}
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  sources?: Source[];
 }
 
 export default function AICoach() {
@@ -52,7 +58,7 @@ export default function AICoach() {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.text, sources: data.sources }]);
     } catch (err: any) {
       console.error(err);
       setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm offline or encountered an error. Your request is saved locally." }]);
@@ -97,7 +103,29 @@ export default function AICoach() {
                   ? "bg-slate-800 text-white rounded-tr-none" 
                   : "bg-slate-100 text-slate-800 rounded-tl-none"
               )}>
-                {msg.content}
+                <div>{msg.content}</div>
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-slate-200/60 text-xs">
+                    <p className="font-semibold text-slate-500 mb-1.5 flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Sources used:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {msg.sources.map((src, idx) => (
+                        <a
+                          key={idx}
+                          href={src.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white hover:bg-slate-50 border border-slate-200 text-indigo-600 hover:text-indigo-800 transition-colors font-medium text-[11px] shadow-2xs max-w-[220px] truncate"
+                          title={src.title}
+                        >
+                          {src.title}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

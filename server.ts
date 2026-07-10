@@ -27,10 +27,21 @@ app.post("/api/chat", async (req, res) => {
       model: "gemma-4-31b-it",
       contents: prompt,
       config: {
-        systemInstruction: systemInstruction || "You are a helpful AI Career Coach powered by Gemma.",
+        systemInstruction: systemInstruction || "You are a helpful AI Career Coach powered by Gemma. Use Google Search to find current career trends, job postings, industry updates, and relevant interview guidance.",
+        tools: [{ googleSearch: {} }],
       },
     });
-    res.json({ text: response.text });
+
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const sources = chunks?.map((chunk: any) => ({
+      title: chunk.web?.title || chunk.web?.uri,
+      uri: chunk.web?.uri
+    })).filter((s: any) => s.uri) || [];
+
+    res.json({ 
+      text: response.text, 
+      sources: sources 
+    });
   } catch (error: any) {
     console.error("AI Error:", error);
     res.status(500).json({ error: error.message });
