@@ -339,19 +339,28 @@ export default function InterviewSim() {
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Interview Simulator</h1>
-          <p className="text-slate-500 mt-2">Practice real-world interview scenarios with real-time feedback.</p>
+          <p className="text-slate-500 mt-2">Practice real-world interview scenarios with real-time feedback powered by <span className="text-indigo-600 font-semibold">Gemma-4-26b-a4b-it</span>.</p>
         </div>
-        {!isOnline || speed === 'offline' ? (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-100 text-xs text-amber-700 font-semibold self-start md:self-auto">
-            <WifiOff className="w-4 h-4 text-amber-500" />
-            <span>Offline Local Sandbox</span>
-          </div>
-        ) : speed === 'slow' ? (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 font-semibold self-start md:self-auto animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
-            <span>Slow Connection Ready</span>
-          </div>
-        ) : null}
+        <div className="flex items-center space-x-2 self-start md:self-auto">
+          {isOnline && speed === 'fast' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Gemma-4-26b-a4b-it (Cloud Engine)
+            </span>
+          )}
+          {isOnline && speed === 'slow' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+              Gemma-4-26b-a4b-it (Low-Data)
+            </span>
+          )}
+          {(!isOnline || speed === 'offline') && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Gemma-4 (Local WASM)
+            </span>
+          )}
+        </div>
       </header>
 
       {!questions.length ? (

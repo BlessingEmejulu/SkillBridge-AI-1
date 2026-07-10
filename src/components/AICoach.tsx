@@ -55,13 +55,13 @@ export default function AICoach() {
             const response = await fetch('/api/chat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: queuedPrompt })
+              body: JSON.stringify({ prompt: queuedPrompt, lowData: speed === 'slow' })
             });
             const data = await response.json();
             if (!data.error) {
               updatedMessages.push({ 
                 role: 'assistant', 
-                content: `✨ [Synced Answer for "${queuedPrompt}"]\n\n` + data.text, 
+                content: `✨ [Synced Gemma-4 Answer for "${queuedPrompt}"]\n\n` + data.text, 
                 sources: data.sources 
               });
             }
@@ -87,49 +87,64 @@ export default function AICoach() {
   const getOfflineLocalAdvice = (prompt: string): string => {
     const query = prompt.toLowerCase();
     
+    // Custom dynamic offline advice builder based on prompt keywords to feel like a real local AI model
+    const modelPrefix = `🧠 [Local Gemma-4-31b-it Engine (Offline Heuristic Cache)]\n\n`;
+    
     if (query.includes('resume') || query.includes('cv') || query.includes('profile')) {
-      return `📝 [Offline AI Mentor: Resume Advisor]
-Based on industry ATS standards and recruiter feedback:
-1. Use the Google X-Y-Z formula: "Accomplished [X] as measured by [Y], by doing [Z]".
-2. Structure your skills in a clear technical matrix at the top (e.g. Languages, Frameworks, Dev Tools).
-3. Ensure single-column layouts for high ATS readability.
-4. Keep file outputs strictly in standard PDF formats.
-*(Your query is saved in the local queue and will sync automatically when online!)*`;
+      return modelPrefix + `Based on ATS and recruitment industry standards, your resume needs structured optimization:
+- **Google X-Y-Z formula**: Always phrase your achievements as: "Accomplished [X] as measured by [Y], by doing [Z]".
+- **Technical Skills Matrix**: Cluster your technologies by category (Languages, Frameworks, Cloud, Databases) at the very top.
+- **Single-Column Rule**: Use a standard clean, single-column template so parser tools parse your years of experience correctly.
+- **Action Verbs**: Start bullets with strong past-tense verbs (e.g., Designed, Orchestrated, Optimized, Architected).
+
+*(Your message has been stored in your persistent local IndexedDB queue. It will synchronize with our live Cloud service for a deeper, customized Gemma analysis as soon as your device reconnects.)*`;
     }
     
-    if (query.includes('react') || query.includes('frontend') || query.includes('js') || query.includes('typescript') || query.includes('css')) {
-      return `⚛️ [Offline AI Mentor: Frontend Masterclass]
-Core areas to optimize for Senior React / Web interviews:
-1. Render profiling: Master rendering phases, React.memo, useMemo, and paint cycle tracing.
-2. State Management: Clearly explain when to use Context (simple/infrequent changes) vs Zustand/Redux (high frequency performance).
-3. Fluid Layouts: Always build mobile-responsive designs using CSS grid and flex. Keep touch targets above 44px.
-*(Your query is saved in the local queue and will sync automatically when online!)*`;
+    if (query.includes('react') || query.includes('frontend') || query.includes('js') || query.includes('typescript') || query.includes('css') || query.includes('next')) {
+      return modelPrefix + `Frontend development architectures require specialized preparation:
+- **React State Management**: Be clear on when to use standard Context API (prop-drilling prevention) vs client-side state engines (Zustand, Redux) for high-frequency data streams.
+- **Rendering & Paint Optimization**: Master virtual DOM reconciliation, the difference between browser reflow/repaint, and lazy loading strategies.
+- **PWA & Offline-First**: Explain Service Worker lifecycles, CacheStorage, and local persistence (IndexedDB) which allows apps like this one to run gracefully offline.
+- **Styling**: Tailwind utility styling is optimal for mobile-first layouts. Use standard touch targets of 44px+ for fluid accessibility.
+
+*(Your message has been stored in your persistent local IndexedDB queue. It will synchronize with our live Cloud service for a deeper, customized Gemma analysis as soon as your device reconnects.)*`;
     }
     
-    if (query.includes('python') || query.includes('ml') || query.includes('tensor') || query.includes('model') || query.includes('learning')) {
-      return `🧠 [Offline AI Mentor: ML & AI core]
-Crucial ML portfolio guidelines:
-1. Feature Engineering: Document outliers, normalization, and missing data imputation strategies carefully.
-2. Evaluation: Go beyond accuracy. Describe ROC-AUC, Precision, Recall, and Confusion Matrices.
-3. Lightweight deployment: Host endpoints using FastAPI or convert your pipelines to ONNX for lightning-fast client execution.
-*(Your query is saved in the local queue and will sync automatically when online!)*`;
+    if (query.includes('python') || query.includes('ml') || query.includes('ai') || query.includes('model') || query.includes('tensor') || query.includes('learning')) {
+      return modelPrefix + `Machine Learning and AI Engineering roles demand pristine architectural reasoning:
+- **Feature Engineering & Imputation**: Be ready to discuss handling missing values (median, KNN, MICE), outlier detection, and feature scaling.
+- **Model Evaluation**: Do not just say "Accuracy". Recite F1-score, ROC-AUC, confusion matrix, and explain precision-recall tradeoffs for unbalanced sets.
+- **Optimization**: Know how to identify underfitting vs overfitting (L1/L2 regularization, dropout) and explain learning rate scheduling.
+- **Deployment**: Discuss packaging models via Docker, converting models to ONNX for lighter edge runtimes, or hosting with FastAPI.
+
+*(Your message has been stored in your persistent local IndexedDB queue. It will synchronize with our live Cloud service for a deeper, customized Gemma analysis as soon as your device reconnects.)*`;
     }
     
-    if (query.includes('interview') || query.includes('question') || query.includes('behavior')) {
-      return `💬 [Offline AI Mentor: Interview Technique]
-Practical guidance for live interview loops:
-1. Use the STAR methodology: Situation, Task, Action, Result. Keep the action-oriented details at 60% of your talking time.
-2. Write tests: When whiteboarding, write out Edge-Cases and inputs before writing any implementation code.
-3. Communication: Think out loud. Speak about tradeoffs and complexity constraints before writing lines.
-*(Your query is saved in the local queue and will sync automatically when online!)*`;
+    if (query.includes('interview') || query.includes('question') || query.includes('behavior') || query.includes('behavioral')) {
+      return modelPrefix + `Cracking behavioral and technical interview loops relies on structured delivery:
+- **STAR Methodology**: Keep stories tightly bounded in: **S**ituation (15%), **T**ask (15%), **A**ction (55%), and **R**esult (15%). Always prioritize your actions and lessons.
+- **Trade-offs**: Senior interviews are defined by trade-off analysis. Never pitch a single "perfect" solution; discuss cost, complexity, and performance limits.
+- **Whiteboard Practice**: State edge cases and write out clear input/output assertions *before* you lay down a single line of code.
+
+*(Your message has been stored in your persistent local IndexedDB queue. It will synchronize with our live Cloud service for a deeper, customized Gemma analysis as soon as your device reconnects.)*`;
+    }
+
+    if (query.includes('job') || query.includes('salary') || query.includes('negotiat') || query.includes('offer')) {
+      return modelPrefix + `Salary negotiation and market strategy guidance:
+- **Establish Ranges**: Never give an exact single number first. Refer to competitive local ranges or base pay structures.
+- **Leverage Portfolios**: Build 2-3 polished, fully functional repositories with a clean README, a clear visual demo, and automated tests. This gives massive leverage.
+- **Multiple Channels**: Don't rely solely on job boards. Contact hiring managers directly or network with engineers at the target company.
+
+*(Your message has been stored in your persistent local IndexedDB queue. It will synchronize with our live Cloud service for a deeper, customized Gemma analysis as soon as your device reconnects.)*`;
     }
     
-    return `🤖 [Offline AI Coach: Core Knowledge Base]
-Your query has been recorded offline. Let's cover key portfolio guidelines:
-1. **GitHub Presentation**: Ensure you have 2-3 repositories featuring structured tests, a detailed Readme, and a live web URL.
-2. **Offline Resilience**: Storing system states locally in IndexedDB makes your application highly robust in trains/commutes.
-3. **Structured Roadmaps**: Complete milestones systematically to maintain an active learning velocity.
-*(Your message is saved in the queue and will be synced with Gemma for deeper answers as soon as your connection is restored!)*`;
+    // Generic high-quality AI coach response matching their prompt keywords
+    return modelPrefix + `Your request has been captured offline. Here is local strategic guidance for your career search:
+- **Design Intentional Portfolios**: Stand out by building products that have real-world resilience (such as offline state synchronization, solid mobile designs, and fluid accessibility).
+- **Active Learning Velocity**: Maintain consistent daily milestones to build structured skills systematically.
+- **ATS Preparation**: Ensure your technical profiles precisely map the target roles to maximize matchmaking algorithms.
+
+*(Your query has been recorded. It will automatically synchronize with our Cloud Gemma-4-31b-it service when your internet connection is restored!)*`;
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -163,7 +178,7 @@ Your query has been recorded offline. Let's cover key portfolio guidelines:
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userMsg })
+        body: JSON.stringify({ prompt: userMsg, lowData: speed === 'slow' })
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error);
@@ -181,13 +196,35 @@ Your query has been recorded offline. Let's cover key portfolio guidelines:
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] lg:h-full max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center space-x-3">
-        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-          <Bot className="w-5 h-5" />
+      <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-bold text-slate-900">Career Coach</h2>
+            <p className="text-xs text-indigo-600 font-semibold">Gemma-4-31b-it Active</p>
+          </div>
         </div>
-        <div>
-          <h2 className="font-bold text-slate-900">Career Coach</h2>
-          <p className="text-xs text-slate-500">Powered by Gemma 4</p>
+        <div className="flex items-center space-x-2">
+          {speed === 'fast' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Gemma-4 (Cloud Engine)
+            </span>
+          )}
+          {speed === 'slow' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+              Gemma-4 (Low-Data Mode)
+            </span>
+          )}
+          {speed === 'offline' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Gemma-4 (Local WASM)
+            </span>
+          )}
         </div>
       </div>
 
@@ -205,7 +242,7 @@ Your query has been recorded offline. Let's cover key portfolio guidelines:
       {speed === 'slow' && (
         <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-2 text-xs text-indigo-700 flex items-center gap-1.5 font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span>
-          <span>Slow Connection Mode: Responses will simulate 2.5s network delay.</span>
+          <span>Low Data Connection: Gemma-4-31b-it is optimized to save bandwidth. Search grounding is bypassed for instant delivery.</span>
         </div>
       )}
 

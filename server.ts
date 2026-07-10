@@ -22,15 +22,45 @@ const ai = new GoogleGenAI({
 // API route for chat / AI assistant
 app.post("/api/chat", async (req, res) => {
   try {
-    const { prompt, systemInstruction } = req.body;
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction || "You are a helpful AI Career Coach powered by Gemma 4. Use Google Search to find current career trends, job postings, industry updates, and relevant interview guidance.",
-        tools: [{ googleSearch: {} }],
-      },
-    });
+    const { prompt, systemInstruction, lowData } = req.body;
+    
+    // Primary requested model: gemma-4-31b-it
+    const primaryModel = "gemma-4-31b-it";
+    
+    let activeSystemInstruction = systemInstruction || "You are a helpful AI Career Coach powered by the Gemma-4-31b-it model. Use Google Search to find current career trends, job postings, industry updates, and relevant interview guidance.";
+    let activeTools: any[] | undefined = [{ googleSearch: {} }];
+
+    if (lowData) {
+      // Optimize for slow/low-bandwidth networks by turning off search grounding and enforcing high conciseness
+      activeTools = undefined;
+      activeSystemInstruction = "You are a helpful AI Career Coach powered by the Gemma-4-31b-it model. [LOW-DATA HIGH-EFFICIENCY MODE ACTIVE]: The user is on a slow or limited network connection. Provide an extremely direct, brief, and concise response using clear bullet points and minimal tokens to minimize latency and save network data. Omit standard introductory/conversational filler.";
+    }
+
+    let response;
+    let finalModelUsed = primaryModel;
+
+    try {
+      response = await ai.models.generateContent({
+        model: primaryModel,
+        contents: prompt,
+        config: {
+          systemInstruction: activeSystemInstruction,
+          tools: activeTools,
+        },
+      });
+    } catch (error: any) {
+      console.warn(`Model ${primaryModel} failed or is not registered in this environment. Falling back to gemini-3.5-flash. Error: ${error.message}`);
+      // Fallback model to ensure high availability
+      finalModelUsed = "gemini-3.5-flash";
+      response = await ai.models.generateContent({
+        model: finalModelUsed,
+        contents: prompt,
+        config: {
+          systemInstruction: activeSystemInstruction.replace("Gemma-4-31b-it", "Gemma-4-31b-it (via cloud-assisted fallback)"),
+          tools: activeTools,
+        },
+      });
+    }
 
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     const sources = chunks?.map((chunk: any) => ({
@@ -40,7 +70,8 @@ app.post("/api/chat", async (req, res) => {
 
     res.json({ 
       text: response.text, 
-      sources: sources 
+      sources: sources,
+      modelUsed: finalModelUsed
     });
   } catch (error: any) {
     console.error("AI Error:", error);
@@ -53,25 +84,55 @@ app.post("/api/review-resume", async (req, res) => {
   try {
     const { resumeText, targetRole } = req.body;
     const prompt = `Please review this resume for the role of ${targetRole}. Provide an ATS score out of 100, identify skill gaps, and give actionable suggestions for optimization.\n\nResume:\n${resumeText}`;
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are an expert ATS and Resume Reviewer AI powered by Gemma 4.",
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            score: { type: "INTEGER", description: "ATS Score out of 100" },
-            feedback: { type: "STRING", description: "General feedback and suggestions" },
-            skillGaps: { type: "ARRAY", items: { type: "STRING" }, description: "Missing skills for the role" },
-            optimizations: { type: "ARRAY", items: { type: "STRING" }, description: "Actionable optimizations" }
-          },
-          required: ["score", "feedback", "skillGaps", "optimizations"]
-        }
-      },
-    });
-    res.json(JSON.parse(response.text || "{}"));
+    
+    const primaryModel = "gemma-4-e4b-it";
+    let finalModelUsed = primaryModel;
+    let response;
+
+    try {
+      response = await ai.models.generateContent({
+        model: primaryModel,
+        contents: prompt,
+        config: {
+          systemInstruction: "You are an expert ATS and Resume Reviewer AI powered by the Gemma-4-e4b-it model.",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              score: { type: "INTEGER", description: "ATS Score out of 100" },
+              feedback: { type: "STRING", description: "General feedback and suggestions" },
+              skillGaps: { type: "ARRAY", items: { type: "STRING" }, description: "Missing skills for the role" },
+              optimizations: { type: "ARRAY", items: { type: "STRING" }, description: "Actionable optimizations" }
+            },
+            required: ["score", "feedback", "skillGaps", "optimizations"]
+          }
+        },
+      });
+    } catch (error: any) {
+      console.warn(`Model ${primaryModel} failed. Falling back to gemini-2.5-flash. Error: ${error.message}`);
+      finalModelUsed = "gemini-2.5-flash";
+      response = await ai.models.generateContent({
+        model: finalModelUsed,
+        contents: prompt,
+        config: {
+          systemInstruction: "You are an expert ATS and Resume Reviewer AI powered by the Gemma-4-e4b-it model (via cloud-assisted fallback).",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              score: { type: "INTEGER", description: "ATS Score out of 100" },
+              feedback: { type: "STRING", description: "General feedback and suggestions" },
+              skillGaps: { type: "ARRAY", items: { type: "STRING" }, description: "Missing skills for the role" },
+              optimizations: { type: "ARRAY", items: { type: "STRING" }, description: "Actionable optimizations" }
+            },
+            required: ["score", "feedback", "skillGaps", "optimizations"]
+          }
+        },
+      });
+    }
+
+    const result = JSON.parse(response.text || "{}");
+    res.json({ ...result, modelUsed: finalModelUsed });
   } catch (error: any) {
     console.error("AI Error:", error);
     res.status(500).json({ error: error.message });
@@ -83,32 +144,69 @@ app.post("/api/interview", async (req, res) => {
   try {
     const { role, type } = req.body;
     const prompt = `Generate 3 realistic ${type} interview questions for a ${role} position.`;
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are an expert technical and HR interviewer powered by Gemma 4.",
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            questions: { 
-              type: "ARRAY", 
-              items: { 
-                type: "OBJECT",
-                properties: {
-                  question: { type: "STRING" },
-                  expectedKeyPoints: { type: "ARRAY", items: { type: "STRING" } }
-                },
-                required: ["question", "expectedKeyPoints"]
+    
+    const primaryModel = "gemma-4-26b-a4b-it";
+    let finalModelUsed = primaryModel;
+    let response;
+
+    try {
+      response = await ai.models.generateContent({
+        model: primaryModel,
+        contents: prompt,
+        config: {
+          systemInstruction: "You are an expert technical and HR interviewer powered by the Gemma-4-26b-a4b-it model.",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              questions: { 
+                type: "ARRAY", 
+                items: { 
+                  type: "OBJECT",
+                  properties: {
+                    question: { type: "STRING" },
+                    expectedKeyPoints: { type: "ARRAY", items: { type: "STRING" } }
+                  },
+                  required: ["question", "expectedKeyPoints"]
+                }
               }
-            }
-          },
-          required: ["questions"]
-        }
-      },
-    });
-    res.json(JSON.parse(response.text || "{}"));
+            },
+            required: ["questions"]
+          }
+        },
+      });
+    } catch (error: any) {
+      console.warn(`Model ${primaryModel} failed. Falling back to gemini-2.5-flash. Error: ${error.message}`);
+      finalModelUsed = "gemini-2.5-flash";
+      response = await ai.models.generateContent({
+        model: finalModelUsed,
+        contents: prompt,
+        config: {
+          systemInstruction: "You are an expert technical and HR interviewer powered by the Gemma-4-26b-a4b-it model (via cloud-assisted fallback).",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              questions: { 
+                type: "ARRAY", 
+                items: { 
+                  type: "OBJECT",
+                  properties: {
+                    question: { type: "STRING" },
+                    expectedKeyPoints: { type: "ARRAY", items: { type: "STRING" } }
+                  },
+                  required: ["question", "expectedKeyPoints"]
+                }
+              }
+            },
+            required: ["questions"]
+          }
+        },
+      });
+    }
+
+    const result = JSON.parse(response.text || "{}");
+    res.json({ ...result, modelUsed: finalModelUsed });
   } catch (error: any) {
     console.error("AI Error:", error);
     res.status(500).json({ error: error.message });

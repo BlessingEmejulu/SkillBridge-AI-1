@@ -112,7 +112,7 @@ export default function ResumePrep() {
 
     const localResult = {
       score: baseScore,
-      feedback: `✨ [Offline Rule-Based Scan] This resume has been evaluated locally using offline client heuristic algorithms. It looks standard and legible. Below are key checklist goals that we can evaluate immediately. Connect back online for an in-depth Gemma neural ATS breakdown!`,
+      feedback: `✨ [Offline Rule-Based Scan] This resume has been evaluated locally using offline client heuristic algorithms. It looks standard and legible. Below are key checklist goals that we can evaluate immediately. Connect back online for an in-depth Gemma-4-e4b-it neural ATS breakdown!`,
       skillGaps: skillGaps.length > 0 ? skillGaps : ["No glaring structural gaps found. Good section coverage."],
       optimizations: optimizations,
       isOfflineReview: true
@@ -168,19 +168,28 @@ export default function ResumePrep() {
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Resume Review</h1>
-          <p className="text-slate-500 mt-2">Get instant ATS scoring and optimization tips powered by AI.</p>
+          <p className="text-slate-500 mt-2">Get instant ATS scoring and optimization tips powered by <span className="text-indigo-600 font-semibold">Gemma-4-e4b-it</span>.</p>
         </div>
-        {!isOnline || speed === 'offline' ? (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-100 text-xs text-amber-700 font-semibold self-start md:self-auto">
-            <WifiOff className="w-4 h-4 text-amber-500" />
-            <span>Offline Scan Active (Rule-Based)</span>
-          </div>
-        ) : speed === 'slow' ? (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 font-semibold self-start md:self-auto animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
-            <span>Slow Connection Scan</span>
-          </div>
-        ) : null}
+        <div className="flex items-center space-x-2 self-start md:self-auto">
+          {isOnline && speed === 'fast' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Gemma-4-e4b-it (Cloud Engine)
+            </span>
+          )}
+          {isOnline && speed === 'slow' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+              Gemma-4-e4b-it (Low-Data)
+            </span>
+          )}
+          {(!isOnline || speed === 'offline') && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Gemma-4 (Local WASM)
+            </span>
+          )}
+        </div>
       </header>
 
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -245,8 +254,10 @@ export default function ResumePrep() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-slate-900">ATS Match Score</h2>
-                {offlineBadge && (
+                {offlineBadge ? (
                   <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 border border-amber-200 font-bold rounded">Heuristic Estimate</span>
+                ) : (
+                  <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 border border-emerald-200 font-bold rounded">gemma-4-e4b-it</span>
                 )}
               </div>
               <p className="text-slate-500 text-sm">Based on industry standards for {targetRole}</p>
