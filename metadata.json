@@ -1,0 +1,6 @@
+{
+  "name": "SkillBridge AI",
+  "description": "An AI-powered career development platform featuring AI career coaching, resume review, interview simulation, learning roadmaps, and more.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
